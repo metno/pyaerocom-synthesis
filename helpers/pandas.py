@@ -3,8 +3,7 @@
 """
 Helper methods used in notebooks
 """
-
-def dataframe_highlight_4d_no_altitude_dim(x, bg_color='#ffcccc'):
+def _dataframe_highlight_4d_no_altitude_dim(x, bg_color='#ffcccc'):
     #copy df to new - original data are not changed
     df = x.copy()
     #set by condition

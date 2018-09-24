@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Files in output directory
+output/*.csv
+output/*.png
+output/*.jpeg
+output/*.nc

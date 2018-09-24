@@ -10,7 +10,7 @@ import os
 
 MODEL_DIR = '/lustre/storeA/project/aerocom/aerocom-users-database/AEROCOM-PHASE-III-CTRL2018/'
 
-def all_model_ids():
+def get_model_ids():
     models = []
     all_files = os.listdir(MODEL_DIR)
     
