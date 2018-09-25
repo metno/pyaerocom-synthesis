@@ -108,3 +108,4 @@ output/*.csv
 output/*.png
 output/*.jpeg
 output/*.nc
+output/*
