@@ -44,7 +44,7 @@ if __name__ == '__main__':
     REANALYSE_EXISTING = False
     RUN_ANALYSIS = True
     ONLY_FIRST = False
-    RAISE_EXCEPTIONS = True
+    RAISE_EXCEPTIONS = False
     
     models = get_model_ids()
     

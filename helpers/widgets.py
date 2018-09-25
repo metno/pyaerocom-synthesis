@@ -9,7 +9,13 @@ import pyaerocom as pya
 import ipywidgets as ipw
 from collections import OrderedDict as od
 from ipywidgets.widgets.interaction import show_inline_matplotlib_plots
+from IPython.display import display
 import os
+
+def FloatProgress(num):
+    f = ipw.FloatProgress(min=0, max=num)
+    display(f)
+    return f
 
 class PlotScatter(object):
     def __init__(self, file_list, figsize=None):
@@ -33,7 +39,7 @@ class PlotScatter(object):
         self.dropdown_left.observe(self.on_change_left)
         self.dropdown_right.observe(self.on_change_right)
         
-        self.data = pya.CollocatedData()
+        self.data = pya.ColocatedData()
         
         self.output_left = ipw.Output()
         self.output_right = ipw.Output()
