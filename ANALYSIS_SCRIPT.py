@@ -9,8 +9,9 @@ import pyaerocom as pya
 
 ### TODOs
 
-# TODO: - include untis and automatic unit conversion (e.g. extinction coeffs
+# 1. include untis and automatic unit conversion (e.g. extinction coeffs
 # sometimes in Mm-1 and sometimes in m-1)
+# 2. flexible
 ### Analysis options
 # if True, existing output files will be overwritten
 REANALYSE_EXISTING = False 

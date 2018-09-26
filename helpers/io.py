@@ -7,7 +7,8 @@ import os
 import pyaerocom as pya
 import ipywidgets as ipw
 import pandas as pd
-from IPython.display import display
+from IPython.display import display, Math
+
 
 def ProgressBarLabelled(num, label=''):
     try:
@@ -30,6 +31,7 @@ class ReadColocatedData(object):
         self._meta_info = []
         self._stats_computed = False
         
+        self.stats_table = None
         self.files = []
         
         if init:
@@ -95,7 +97,7 @@ class ReadColocatedData(object):
         if not self._stats_computed:
             self.compute_statistics()
         header = ['Model', 'Year', 'Variable', 'Obs', 'Freq', 'FreqSRC',
-                  'Bias', 'RMS', 'R', 'FGE']
+                  'NMB', 'RMS', 'R', 'FGE']
         data = []
         for info in self._meta_info:
             file_data = [info['model_id'], 
@@ -113,30 +115,47 @@ class ReadColocatedData(object):
         df = pd.DataFrame(data, columns=header)
         df.set_index(['Model', 'Year', 'Variable', 'Obs'], inplace=True)
         df.sort_index(inplace=True)
+        self.stats_table = df
         return df
     
-    @staticmethod
-    def read_statistics_table_csv(file_path):
-        return pd.DataFrame().from_csv(file_path, index_col=['Model',
-                                                               'Year',
-                                                               'Variable',
-                                                               'Obs'], parse_dates=False)
-        
 
-from pandas import DataFrame
-class MultiModelObsTable(DataFrame):
-    def __init__(self, *args, **kwargs):
-        super(self, DataFrame).__init__(*args, **kwargs)
+    def read_statistics_table_csv(self, file_path):
+        self.stats_table = pd.DataFrame().from_csv(file_path, 
+                                                   index_col=['Model',
+                                                              'Year',
+                                                              'Variable',
+                                                              'Obs'], 
+                                                   parse_dates=False)
+        return self.stats_table
     
-    def plot_heatmap(self, ts_type):
-        raise NotImplementedError
+    def plot_heatmap(self, colname, ts_type='monthly', table=None,
+                     cols=['Model', 'Year'], rows=['Variable', 'Obs'], 
+                     output_dir=None, savefig=True,
+                     **kwargs):
+        if table is None:
+            if not isinstance(self.stats_table, pd.DataFrame):
+                self.compute_statistics_table()
+            table = self.stats_table
+        subset = table[table['Freq'] == ts_type]
+        subset_pivot = pd.pivot_table(subset, values=colname,
+                                      columns=cols, index=rows)
+        ax = pya.plot.heatmaps.df_to_heatmap(subset_pivot,**kwargs)
+        ax.set_title('{} ({})'.format(colname, ts_type))
+        if savefig and output_dir and os.path.exists(output_dir):
+            ax.figure.tight_layout()
+            ax.figure.savefig(output_dir + 'heatmap_{}_{}.png'.format(colname,
+                                                                      ts_type))
+        return ax
+    
+    
+    
         
 if __name__ == '__main__':
     
     basedir = pya.const.OUT_BASEDIR_PPI + 'colocated_data'
     reader = ReadColocatedData(basedir)
-    reader.read_meta_from_files()
-    reader.compute_statistics()
+    #reader.read_meta_from_files()
+    #reader.compute_statistics()
     
     
         
