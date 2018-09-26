@@ -104,8 +104,10 @@ venv.bak/
 .mypy_cache/
 
 # Files in output directory
-output/*.csv
-output/*.png
-output/*.jpeg
-output/*.nc
 output/*
+
+# Output from notebooks
+output_notebooks/*.csv
+output_notebooks/*.png
+output_notebooks/*.jpeg
+output_notebooks/*.nc

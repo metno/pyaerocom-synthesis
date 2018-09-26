@@ -123,6 +123,14 @@ class ReadColocatedData(object):
                                                                'Obs'], parse_dates=False)
         
 
+from pandas import DataFrame
+class MultiModelObsTable(DataFrame):
+    def __init__(self, *args, **kwargs):
+        super(self, DataFrame).__init__(*args, **kwargs)
+    
+    def plot_heatmap(self, ts_type):
+        raise NotImplementedError
+        
 if __name__ == '__main__':
     
     basedir = pya.const.OUT_BASEDIR_PPI + 'colocated_data'

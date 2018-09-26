@@ -7,13 +7,37 @@ Script for intercomparison of optical properties between models and
 from helpers.model_list import get_model_ids
 import pyaerocom as pya
 
-# alternative ts_types in case one of the provided in setup is not in dataset
-TS_TYPE_READ_ALT = {'daily'      :   ['hourly', '3hourly'],
-                    'monthly'    :   ['daily', 'hourly', '3hourly']}            
-# Todo: put this into class
-TS_TYPE_SETUP = dict(monthly=['monthly', 'yearly'],
-                     daily = ['monthly', 'yearly'],
-                     read_alt=TS_TYPE_READ_ALT)
+### TODOs
+
+# TODO: - include untis and automatic unit conversion (e.g. extinction coeffs
+# sometimes in Mm-1 and sometimes in m-1)
+### Analysis options
+# if True, existing output files will be overwritten
+REANALYSE_EXISTING = False 
+# if False, no analysis is performed
+RUN_ANALYSIS = True
+# if True, only the first model / obsnetwork is analysed
+ONLY_FIRST = False
+# if True, the analysis will stop whenever an error occurs (else, errors that 
+# occurred will be written into the logfiles)
+RAISE_EXCEPTIONS = False
+
+### Setup of TS_TYPES for colocation 
+# NOTE: THIS WILL CHANGE SOON as this is too complicated and redundant, that is, 
+# the analysis should be performed at the highest possible resolution (if not 
+# other specified) and then downscaling can be done in post based on colocated
+# data files
+
+# keys are model source ts_types (i.e. the original model resolution, values
+# are corresponding ts_types used for analysis)
+TS_TYPE_SETUP = dict(monthly    =   ['monthly', 'yearly'],
+                     daily      =   ['monthly', 'yearly'])
+
+# Setup alternative ts_types in case one of the provided in setup is not in dataset                     
+TS_TYPE_READ_ALT = dict(daily   =  ['hourly', '3hourly'],
+                        monthly =   ['daily', 'hourly', '3hourly'])
+
+TS_TYPE_SETUP['read_alt'] = TS_TYPE_READ_ALT
 
 # Years to be analysed
 YEARS = sorted([2008, 2010])
@@ -35,16 +59,12 @@ OBS_IDS = list(OBS_INFO.keys())
 FILTER = 'WORLD-noMOUNTAINS'
 
 ### output directories
-OUT_BASE = './output/'       
+OUT_BASE = './output/'
              
 if __name__ == '__main__':
     from time import time
     
     t0 = time()
-    REANALYSE_EXISTING = False
-    RUN_ANALYSIS = True
-    ONLY_FIRST = False
-    RAISE_EXCEPTIONS = False
     
     models = get_model_ids()
     
