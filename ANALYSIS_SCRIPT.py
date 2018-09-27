@@ -43,18 +43,18 @@ TS_TYPE_SETUP['read_alt'] = TS_TYPE_READ_ALT
 # Years to be analysed
 YEARS = sorted([2008, 2010])
 
-OBS_INFO = {'AeronetSunV3Lev2.daily' :  ['od550aer', 'ang4487aer'],
+OBS_INFO = {'EBASMC'    :   ['absc550aer', 
+                             'scatc550aer'],
+            'AeronetSunV3Lev2.daily' :  ['od550aer', 'ang4487aer'],
             'AeronetSDAV3Lev2.daily' :  ['od550lt1aer', 
                                          'od550gt1aer'],
             pya.const.AERONET_INV_V3L2_DAILY_NAME : ['abs550aer'],
             'MODIS6.terra'          :   ['od550aer'],
             'MODIS6.aqua'           :   ['od550aer']}
 
-# =============================================================================
-# OBS_INFO = {'EBASMC'    :   ['absc550aer', 
-#                              'scatc550aer']}
-# =============================================================================
-
+# lis
+# key -> in Model, value -> in observation
+VARS_ALT = {'ec550aer': 'scatc550aer'}
 OBS_IDS = list(OBS_INFO.keys())
 
 FILTER = 'WORLD-noMOUNTAINS'
@@ -73,8 +73,9 @@ if __name__ == '__main__':
         OBS_IDS = [OBS_IDS[0]]
     
     for OBS_ID in OBS_IDS:  
-        VARS = OBS_INFO[OBS_ID]
+        VARS = OBS_INFO[OBS_ID] + list(VARS_ALT.keys())
         stp = pya.analysis.Analyser(vars_to_analyse=VARS, 
+                                    alt_vars=VARS_ALT,
                                     obs_id=OBS_ID, 
                                     years=YEARS,
                                     filter_name=FILTER, 
