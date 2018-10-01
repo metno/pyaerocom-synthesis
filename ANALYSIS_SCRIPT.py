@@ -16,7 +16,7 @@ import pyaerocom as pya
 # if True, existing output files will be overwritten
 REANALYSE_EXISTING = False
 # if False, no analysis is performed
-RUN_ANALYSIS = True
+RUN_ANALYSIS = False
 # if True, only the first model / obsnetwork is analysed
 ONLY_FIRST = False
 # if True, the analysis will stop whenever an error occurs (else, errors that 
@@ -61,9 +61,6 @@ FILTER = 'WORLD-noMOUNTAINS'
 
 # TODO: needs to be variable / obsnetwork specific
 VERT_SCHEME = 'surface'
-
-### output directories
-OUT_BASE = './output/'
              
 if __name__ == '__main__':
     from time import time
@@ -84,7 +81,6 @@ if __name__ == '__main__':
                                     filter_name=FILTER, 
                                     vert_scheme=VERT_SCHEME,
                                     ts_type_setup=TS_TYPE_SETUP,
-                                    out_basedir=OUT_BASE,
                                     REANALYSE_EXISTING=REANALYSE_EXISTING,
                                     ONLY_FIRST=ONLY_FIRST,
                                     RAISE_EXCEPTIONS=RAISE_EXCEPTIONS)
