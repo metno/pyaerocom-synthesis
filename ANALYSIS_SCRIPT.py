@@ -14,9 +14,9 @@ import pyaerocom as pya
 # 2. flexible
 ### Analysis options
 # if True, existing output files will be overwritten
-REANALYSE_EXISTING = False
+REANALYSE_EXISTING = True
 # if False, no analysis is performed
-RUN_ANALYSIS = False
+RUN_ANALYSIS = True
 # if True, only the first model / obsnetwork is analysed
 ONLY_FIRST = False
 # if True, the analysis will stop whenever an error occurs (else, errors that 
@@ -45,6 +45,8 @@ YEARS = sorted([2008, 2010])
 
 OBS_INFO = {'EBASMC'    :   ['absc550aer', 
                              'scatc550aer'],
+            'CALIOP3'   :   ['od550aer'],
+            'MISR'      :   ['od550aer', 'ang4487aer'],
             'AeronetSunV3Lev2.daily' :  ['od550aer', 'ang4487aer'],
             'AeronetSDAV3Lev2.daily' :  ['od550lt1aer', 
                                          'od550gt1aer'],
