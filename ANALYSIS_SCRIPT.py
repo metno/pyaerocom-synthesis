@@ -31,39 +31,79 @@ RAISE_EXCEPTIONS = False
 
 # keys are model source ts_types (i.e. the original model resolution, values
 # are corresponding ts_types used for analysis)
-TS_TYPE_SETUP = dict(monthly    =   ['monthly', 'yearly'],
-                     daily      =   ['monthly', 'yearly'])
+TS_TYPES_ANA_OBS_GRIDDED = ['monthly', 'yearly']
+TS_TYPES_ANA_OBS_UNGRIDDED = ['daily', 'monthly', 'yearly']
 
-# Setup alternative ts_types in case one of the provided in setup is not in dataset                     
-TS_TYPE_READ_ALT = dict(daily   =  ['hourly', '3hourly'],
-                        monthly =   ['daily', 'hourly', '3hourly'])
+# Leave read ts_type of obsdata flexible, that is, if the analysis ts_type
+# is e.g., monthly and the read ts_type for model is e.g., daily, then the
+# observation data ts_type can be anything that is in higher resolution or 
+# equal resolution monthly. If False, it is required to be the same ts_type
+# as the model read ts_type (i.e. daily in this example)
+TS_TYPE_OBS_FLEX = True
 
-TS_TYPE_SETUP['read_alt'] = TS_TYPE_READ_ALT
+from pyaerocom.analysis import AnalysisSetup as STP
 
-# Years to be analysed
-YEARS = sorted([2008, 2010])
+# specify here information about the observation networks and variables (and 
+# sample frequencies). The script below iterates over all analysis setup 
+# instances created here (they are dictionaries !), respecively for each 
+# time interval specified above
+ANALYSIS_SETUP = [
+        # EBAS multicolumn
+        STP(obs_id='EBASMC', 
+            vars_to_analyse=['ec550aer'], # model domain
+            alt_vars={'ec550aer': 'scatc550aer'}, #observation
+            ts_types_ana=TS_TYPES_ANA_OBS_UNGRIDDED,
+            vert_scheme='surface'),
+        
+            # Aeronet Sun v3, level 2
+        STP(obs_id='AeronetSunV3Lev2.daily',
+            vars_to_analyse=['od550aer', 'ang4487aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_UNGRIDDED),
+        
+        # Aeronet SDA v3, level 2
+        STP(obs_id='AeronetSDAV3Lev2.daily',
+            vars_to_analyse=['od550lt1aer', 'od550gt1aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_UNGRIDDED),
+        
+        # Aeronet INV v3, level2
+        STP(obs_id='AeronetInvV3Lev2.daily',
+            vars_to_analyse=['abs550aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_UNGRIDDED),
+        # Caliop v3
+        STP(obs_id='CALIOP3',
+            vars_to_analyse=['od550aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_GRIDDED),
+            
+        # MISR v3.1
+        STP(obs_id='MISR_V31',
+            vars_to_analyse=['od550aer', 'ang4487aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_GRIDDED),
+        
+        # AATSR v4.3
+        STP(obs_id='AATSR_SU_v4.3',
+            vars_to_analyse= ['abs550aer', 'ang4487aer', 'od550aer', 
+                              'od550dust', 'od550gt1aer', 'od550lt1aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_GRIDDED),
+        
+        # MODIS 6 aqua
+        STP(obs_id='MODIS6.aqua',
+            vars_to_analyse= ['od550aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_GRIDDED),
+            
+        # MODIS 6 terra
+        STP(obs_id='MODIS6.terra',
+            vars_to_analyse= ['od550aer'],
+            ts_types_ana=TS_TYPES_ANA_OBS_GRIDDED)
+            ]        
+  
+# Time intervals to be analysed: (start, stop) -> for single years use year 
+# number at start and None at stop)
+TIME_IVALS = [(2008, None),
+              (2010, None)]
 
-OBS_INFO = {'EBASMC'    :   ['absc550aer', 
-                             'scatc550aer'],
-            'CALIOP3'   :   ['od550aer'],
-            'MISR'      :   ['od550aer', 'ang4487aer'],
-            'AeronetSunV3Lev2.daily' :  ['od550aer', 'ang4487aer'],
-            'AeronetSDAV3Lev2.daily' :  ['od550lt1aer', 
-                                         'od550gt1aer'],
-            pya.const.AERONET_INV_V3L2_DAILY_NAME : ['abs550aer'],
-            'MODIS6.terra'          :   ['od550aer'],
-            'MODIS6.aqua'           :   ['od550aer']}
-
-# lis
-# key -> in Model, value -> in observation
-VARS_ALT = {'ec550aer': 'scatc550aer'}
-OBS_IDS = list(OBS_INFO.keys())
-
-FILTER = 'WORLD-noMOUNTAINS'
-
-# TODO: needs to be variable / obsnetwork specific
-VERT_SCHEME = 'surface'
-             
+# Regional filter for analysis
+FILTER_NAME = 'WORLD-noMOUNTAINS'
+          
 if __name__ == '__main__':
     from time import time
     
@@ -71,24 +111,24 @@ if __name__ == '__main__':
     
     models = get_model_ids()
     
-    if ONLY_FIRST:
-        OBS_IDS = [OBS_IDS[0]]
-    
-    for OBS_ID in OBS_IDS:  
-        VARS = OBS_INFO[OBS_ID] + list(VARS_ALT.keys())
-        stp = pya.analysis.Analyser(vars_to_analyse=VARS, 
-                                    alt_vars=VARS_ALT,
-                                    obs_id=OBS_ID, 
-                                    years=YEARS,
-                                    filter_name=FILTER, 
-                                    vert_scheme=VERT_SCHEME,
-                                    ts_type_setup=TS_TYPE_SETUP,
-                                    REANALYSE_EXISTING=REANALYSE_EXISTING,
-                                    ONLY_FIRST=ONLY_FIRST,
-                                    RAISE_EXCEPTIONS=RAISE_EXCEPTIONS)
+    for i, stp in enumerate(ANALYSIS_SETUP):
+        if i==1 and ONLY_FIRST:
+            print(stp)
+            break
+        for (START, STOP) in TIME_IVALS:
+            stp.update(start=START,
+                       stop=STOP,
+                       filter_name=FILTER_NAME,
+                       RAISE_EXCEPTIONS=RAISE_EXCEPTIONS,
+                       TS_TYPE_OBS_FLEX=TS_TYPE_OBS_FLEX)
+            
+            
+            ana = pya.analysis.Analyser(stp)
         
-        if RUN_ANALYSIS:
-            stp.run(models)
-                        
+            if RUN_ANALYSIS:
+                ana.run(models)
+            
+       
+                            
     dt = (time()-t0)/60
     print('Analysis finished. Total time: {} min'.format(dt))
