@@ -3,8 +3,8 @@
 """
 Script for intercomparison of optical properties between models and 
 """
-
-from helpers.model_list import get_model_ids
+from warnings import filterwarnings
+from helpers.model_list import get_model_ids #list of model IDs
 import pyaerocom as pya
 
 ### TODOs
@@ -14,7 +14,7 @@ import pyaerocom as pya
 # 2. flexible
 ### Analysis options
 # if True, existing output files will be overwritten
-REANALYSE_EXISTING = True
+REANALYSE_EXISTING = False
 # if False, no analysis is performed
 RUN_ANALYSIS = True
 # if True, only the first model / obsnetwork is analysed
@@ -57,7 +57,7 @@ ANALYSIS_SETUP = [
         
             # Aeronet Sun v3, level 2
         STP(obs_id='AeronetSunV3Lev2.daily',
-            vars_to_analyse=['od550aer', 'ang4487aer'],
+            vars_to_analyse=['ang4487aer', 'od550aer'],
             ts_types_ana=TS_TYPES_ANA_OBS_UNGRIDDED),
         
         # Aeronet SDA v3, level 2
@@ -106,26 +106,32 @@ FILTER_NAME = 'WORLD-noMOUNTAINS'
           
 if __name__ == '__main__':
     from time import time
-    
+
+    filterwarnings('ignore')
     t0 = time()
     
     models = get_model_ids()
     
+    num = len(ANALYSIS_SETUP)
     for i, stp in enumerate(ANALYSIS_SETUP):
         if i==1 and ONLY_FIRST:
             print(stp)
             break
         for (START, STOP) in TIME_IVALS:
+            
             stp.update(start=START,
                        stop=STOP,
                        filter_name=FILTER_NAME,
                        RAISE_EXCEPTIONS=RAISE_EXCEPTIONS,
-                       TS_TYPE_OBS_FLEX=TS_TYPE_OBS_FLEX)
+                       TS_TYPE_OBS_FLEX=TS_TYPE_OBS_FLEX,
+                       REANALYSE_EXISTING=REANALYSE_EXISTING)
             
             
             ana = pya.analysis.Analyser(stp)
         
             if RUN_ANALYSIS:
+                pya.print_log.info('At: {}, start time = {} ({} of {})'
+                                   .format(stp.obs_id, stp.start, i, num))
                 ana.run(models)
             
        
