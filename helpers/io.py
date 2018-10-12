@@ -25,7 +25,9 @@ class ReadColocatedData(object):
         if not os.path.exists(base_dir):
             raise IOError('Directory {} does not exist'.format(base_dir))
         self.base_dir = base_dir
-        self.model_ids = []
+        self.model_ids = {}
+        
+        self.model_year_combinations = []
         self.var_obs_combinations = []
         
         self._meta_info = []
@@ -60,7 +62,7 @@ class ReadColocatedData(object):
             model_dir = os.path.join(self.base_dir, model_id)
             files = os.listdir(model_dir)
             if not model_id in self.model_ids:
-                self.model_ids.append(model_id)
+                self.model_ids[model_id] = model_id.split('_')[0].split('-')[0]
             for file in files:
                 if file.endswith('COLL.nc'):
                     paths.append(os.path.join(model_dir, file))
@@ -74,27 +76,39 @@ class ReadColocatedData(object):
         data = pya.ColocatedData()
         f = ProgressBarLabelled(len(self.files), 'Reading meta from {} files'
                                 .format(self.number_of_files))
-        moc = []
+        my_all = []
+        vo_all = []
+        
         for file in self.files:
             info = data.get_meta_from_filename(file)
             info['model_id'] = info['data_source'][1]
             info['obs_id'] = info['data_source'][0]
             info['year'] = info['start'].year
             info['file'] = file
-            mo = [info['var_name'], info['obs_id']]
+            vo = [info['var_name'], info['obs_id']]
+            my = [info['model_id'], info['year']]
             found = False
-            for _mo in moc:
-                if _mo == mo:
+            for _vo in vo_all:
+                if _vo == vo:
                     found = True
                     break
             if not found:
-                moc.append(mo)
+                vo_all.append(vo)
+            
+            found = False
+            for _my in my_all:
+                if _my == my:
+                    found = True
+                    break
+            if not found:
+                my_all.append(my)
             
             results.append(info)
             if f is not None:
                 f.value += 1
         self._meta_info = results
-        self.var_obs_combinations = moc
+        self.var_obs_combinations = vo_all
+        self.model_year_combinations = my_all
     
     def compute_statistics(self):
         if not len(self._meta_info) == self.number_of_files:
@@ -133,41 +147,57 @@ class ReadColocatedData(object):
         return ovmy_found
                         
     def compute_statistics_table_unique(self, ts_type_src, flex_search=True):
-        
+        raise NotImplementedError
         ovm = self.find_meta_unique(ts_type_src, flex_search)
         
         return self.compute_statistics_table(ovm.values()) 
         
-    def compute_statistics_table(self, meta_info=None):
+    def compute_statistics_table(self, var_obs_combinations=None, 
+                                 model_year_combinations=None):
         
-        if meta_info is None:
-            if not len(self._meta_info) == self.number_of_files:
-                self.read_meta_from_files()
-            meta_info = self._meta_info
+        if var_obs_combinations is None:
+            var_obs_combinations = self.var_obs_combinations
+        
+        if model_year_combinations is None:
+            model_year_combinations = self.model_year_combinations
             
+        meta_info = self._meta_info
+        
         header = ['model_id', 'year', 'var_name', 'obs_id', 'ts_type', 
                   'ts_type_src', 'nmb', 'rms', 'R', 'fge']
         data = []
-        f = ProgressBarLabelled(len(meta_info), 'Computing statistics table b({} '
-                                'files)'.format(len(meta_info)))
+        f = ProgressBarLabelled(len(meta_info), 
+                                'Computing statistics table ({} files)'
+                                .format(len(meta_info)))
+        
         d = pya.ColocatedData()
         for info in meta_info:
-            if not 'nmb' in info:
-                dat = d.read_netcdf(info['file'])
-                info.update(dat.calc_statistics())
+            vo_match, my_match = False, False
+            for vo in var_obs_combinations:
+                if [info['var_name'], info['obs_id']] == vo:
+                    vo_match = True
+                    break
+            for my in model_year_combinations:
+                if [info['model_id'], info['year']] == my:
+                    my_match = True
+                    break
+            if vo_match and my_match:
+                if not 'nmb' in info:
+                    dat = d.read_netcdf(info['file'])
+                    info.update(dat.calc_statistics())
                 
-            file_data = [info['model_id'], 
-                         info['year'], 
-                         info['var_name'], 
-                         info['obs_id'],
-                         info['ts_type'],
-                         info['ts_type_src'],
-                         info['nmb'], 
-                         info['rms'], 
-                         info['R'], 
-                         info['fge']]
-            
-            data.append(file_data)
+                file_data = [info['model_id'], 
+                             info['year'], 
+                             info['var_name'], 
+                             info['obs_id'],
+                             info['ts_type'],
+                             info['ts_type_src'],
+                             info['nmb'], 
+                             info['rms'], 
+                             info['R'], 
+                             info['fge']]
+                
+                data.append(file_data)
             if f is not None:
                 f.value += 1
         df = pd.DataFrame(data, columns=header)
@@ -177,8 +207,6 @@ class ReadColocatedData(object):
         self.stats_table = df
         return df
     
-    
-
     def read_statistics_table_csv(self, file_path):
         self.stats_table = pd.DataFrame().from_csv(file_path, 
                                                    index_col=['model_id',
@@ -193,8 +221,11 @@ class ReadColocatedData(object):
     
 def plot_heatmap(table, colname, ts_type='monthly',
                  cols=['model_id', 'year'], rows=['var_name', 'obs_id'], 
-                 output_dir=None, savefig=True,
-                 **kwargs):
+                 output_dir=None, savefig=False, savename_add=None,
+                 fontsize=None, **kwargs):
+    if fontsize:
+        from matplotlib import rcParams
+        rcParams.update({'font.size': fontsize})
     subset=table[table['ts_type'] == ts_type]
     try:
         subset = [colname].unstack(cols)
@@ -202,11 +233,18 @@ def plot_heatmap(table, colname, ts_type='monthly',
         subset = pd.pivot_table(subset, values=colname,
                                       columns=cols, index=rows)
     ax = pya.plot.heatmaps.df_to_heatmap(subset,**kwargs)
-    ax.set_title('{} ({})'.format(colname, ts_type))
+    if 'table_name' in kwargs:
+        title = kwargs['table_name']
+    else:
+        title = colname
+    ax.set_title('{} ({})'.format(title, ts_type))
     if savefig and output_dir and os.path.exists(output_dir):
         ax.figure.tight_layout()
-        ax.figure.savefig(output_dir + 'heatmap_{}_{}.png'.format(colname,
-                                                                  ts_type))
+        if savename_add is not None:
+            savename = 'heatmap_{}_{}.png'.format(colname, ts_type)
+        else:
+            savename = 'heatmap_{}_{}_{}.png'.format(colname, ts_type, savename_add)
+        ax.figure.savefig(output_dir + savename)
     return ax
     
     
@@ -217,9 +255,14 @@ if __name__ == '__main__':
     basedir = pya.const.OUTPUTDIR + 'colocated_data'
     reader = ReadColocatedData(basedir)
     
-    m = reader.find_meta_unique(ts_type_src='monthly')
-    y = reader.find_meta_unique(ts_type_src='yearly')
-    d = reader.find_meta_unique(ts_type_src='daily')
+    reader.compute_statistics_table(var_obs_combinations=[['od550aer', 'MISRV31'],
+                                                          ['od550aer', 'MODIS6.terra']],
+            model_year_combinations=[['ECHAM6.3-HAM2.3_AP3-CTRL2016-PD', 2010],
+                                     ['CNRM-AESM2Nud_AP3-CTRL2016-PD', 2010]])
+    
+    #m = reader.find_meta_unique(ts_type_src='monthly')
+    #y = reader.find_meta_unique(ts_type_src='yearly')
+    #d = reader.find_meta_unique(ts_type_src='daily')
     #tab = reader.compute_statistics_table_unique('monthly')
 
 
