@@ -110,15 +110,21 @@ class ReadColocatedData(object):
         self.var_obs_combinations = vo_all
         self.model_year_combinations = my_all
     
-    def compute_statistics(self):
+    def compute_statistics(self, crop_value_range_var=True):
         if not len(self._meta_info) == self.number_of_files:
             self.read_meta_from_files()
         d = pya.ColocatedData()
         f = ProgressBarLabelled(len(self.files), 'Computing statistics ({} '
                                 'files)'.format(self.number_of_files))
+
         for i, file in enumerate(self.files):
             data = d.read_netcdf(file)
-            self._meta_info[i].update(data.calc_statistics())
+            if crop_value_range_var:
+                var = pya.Variable(data.meta['var_name'][1])
+                self._meta_info[i].update(data.calc_statistics(lowlim=var.lower_limit, 
+                                                           highlim=var.upper_limit))
+            else:
+                self._meta_info[i].update(data.calc_statistics())
             if f is not None:
                 f.value += 1
         self._stats_computed=True
@@ -153,7 +159,8 @@ class ReadColocatedData(object):
         return self.compute_statistics_table(ovm.values()) 
         
     def compute_statistics_table(self, var_obs_combinations=None, 
-                                 model_year_combinations=None):
+                                 model_year_combinations=None,
+                                 crop_value_range_var=True):
         
         if var_obs_combinations is None:
             var_obs_combinations = self.var_obs_combinations
@@ -164,7 +171,8 @@ class ReadColocatedData(object):
         meta_info = self._meta_info
         
         header = ['model_id', 'year', 'var_name', 'obs_id', 'ts_type', 
-                  'ts_type_src', 'nmb', 'rms', 'R', 'fge']
+                  'ts_type_src', 'nmb', 'rms', 'R', 'R_kendall',
+                  'fge']
         data = []
         f = ProgressBarLabelled(len(meta_info), 
                                 'Computing statistics table ({} files)'
@@ -184,7 +192,17 @@ class ReadColocatedData(object):
             if vo_match and my_match:
                 if not 'nmb' in info:
                     dat = d.read_netcdf(info['file'])
-                    info.update(dat.calc_statistics())
+                    if crop_value_range_var:
+                        var = pya.Variable(dat.meta['var_name'][1])
+# =============================================================================
+#                         print(dat.meta['var_name'][1], var.lower_limit,
+#                               var.upper_limit)
+# =============================================================================
+                        info.update(dat.calc_statistics(lowlim=var.lower_limit, 
+                                                         highlim=var.upper_limit))
+                    else:
+                        info.update(dat.calc_statistics())
+                    
                 
                 file_data = [info['model_id'], 
                              info['year'], 
@@ -195,6 +213,7 @@ class ReadColocatedData(object):
                              info['nmb'], 
                              info['rms'], 
                              info['R'], 
+                             info['R_kendall'],
                              info['fge']]
                 
                 data.append(file_data)

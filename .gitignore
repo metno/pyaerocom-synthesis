@@ -111,3 +111,4 @@ output_notebooks/*.csv
 output_notebooks/*.png
 output_notebooks/*.jpeg
 output_notebooks/*.nc
+testing/output/
