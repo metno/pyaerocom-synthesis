@@ -221,6 +221,7 @@ class ReadColocatedData(object):
     
 def plot_heatmap(table, colname, ts_type='monthly',
                  cols=['model_id', 'year'], rows=['var_name', 'obs_id'], 
+                 row_order=None,
                  output_dir=None, savefig=False, savename_add=None,
                  fontsize=None, **kwargs):
     if fontsize:
@@ -228,10 +229,25 @@ def plot_heatmap(table, colname, ts_type='monthly',
         rcParams.update({'font.size': fontsize})
     subset=table[table['ts_type'] == ts_type]
     try:
-        subset = [colname].unstack(cols)
+        subset = subset[colname].unstack(cols)
     except:
         subset = pd.pivot_table(subset, values=colname,
                                       columns=cols, index=rows)
+    
+    if row_order:
+        _new_order = []
+        for item in row_order:
+            for comb in subset.index:
+                if tuple(item) == comb:
+                    _new_order.append(tuple(item))
+                    
+        if len(_new_order) == len(subset.index):
+            print('Reordering row indices according to input selection')
+            subset = subset.reindex(_new_order)
+# =============================================================================
+#             subset.set_index(pd.MultiIndex.from_tuples(_new_order,sortorder=False), 
+#                             inplace=True)
+# =============================================================================
     ax = pya.plot.heatmaps.df_to_heatmap(subset,**kwargs)
     if 'table_name' in kwargs:
         title = kwargs['table_name']
